@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Invoice Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.0/purify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  </head>
+  <body>
+    <form id="invoice-form">
+      <input type="text" id="item" placeholder="Item Description" required />
+      <input type="number" id="quantity" placeholder="Quantity" required />
+      <input type="number" id="price" placeholder="Price per Item" required />
+      <button type="button" onclick="addItem()">Add Item</button>
+    </form>
+
+    <div id="items-list"></div>
+    <div id="invoice" style="display: none;"></div>
+    <button id="download-btn" style="display: none;" onclick="downloadPDF()">
+      Download PDF
+    </button>
+
+    <script>
+      const items = [];
+
+      function addItem() {
+        const itemDesc = document.getElementById("item").value;
+        const quantity = parseFloat(document.getElementById("quantity").value);
+        const price = parseFloat(document.getElementById("price").value);
+
+        if (itemDesc && quantity > 0 && price > 0) {
+          const item = { description: itemDesc, quantity, price };
+          items.push(item);
+          renderItems();
+          clearInputs();
+        } else {
+          alert("Please fill in all fields correctly.");
+        }
+      }
+
+      function renderItems() {
+        const itemsList = document.getElementById("items-list");
+        itemsList.innerHTML = ""; // Clear previous items
+
+        items.forEach((item, index) => {
+          const itemDiv = document.createElement("div");
+          itemDiv.innerHTML = `
+                    <p>${item.description} - Quantity: ${
+            item.quantity
+          } - Price: $${item.price.toFixed(2)}
+                    <button onclick="removeItem(${index})">Remove</button></p>
+                `;
+          itemsList.appendChild(itemDiv);
+        });
+
+        document.getElementById("download-btn").style.display =
+          items.length > 0 ? "block" : "none"; // Show download button if there are items
+      }
+
+      function removeItem(index) {
+        items.splice(index, 1); // Remove item from array
+        renderItems(); // Re-render item list
+      }
+
+      function clearInputs() {
+        document.getElementById("item").value = "";
+        document.getElementById("quantity").value = "";
+        document.getElementById("price").value = "";
+      }
+
+      function generateInvoice() {
+        let totalPrice = 0;
+        let sstTotal = 0;
+
+        let invoiceHTML = `<h1>Invoice</h1>`;
+        items.forEach((item) => {
+          const itemTotal = item.quantity * item.price;
+          totalPrice += itemTotal;
+          invoiceHTML += `
+                    <p>Item: ${item.description}</p>
+                    <p>Quantity: ${item.quantity}</p>
+                    <p>Price per Item: $${item.price.toFixed(2)}</p>
+                    <p>Total Price: $${itemTotal.toFixed(2)}</p>`;
+        });
+
+        sstTotal = totalPrice * 0.1;
+        const finalTotal = totalPrice + sstTotal;
+
+        invoiceHTML += `
+                <p>SST (10%): $${sstTotal.toFixed(2)}</p>
+                <h2>Total Amount Due: $${finalTotal.toFixed(2)}</h2>
+            `;
+
+        document.getElementById("invoice").innerHTML = invoiceHTML;
+        document.getElementById("invoice").style.display = "block"; // Show invoice
+      }
+
+      function downloadPDF() {
+        generateInvoice(); // Ensure the invoice is generated before downloading
+        const element = document.getElementById("invoice");
+
+        // Generate a dynamic filename based on current date
+        const today = new Date();
+        const formattedDate = today
+          .toISOString()
+          .split("T")[0]
+          .replace(/-/g, "");
+        const filename = `INV-${formattedDate}.pdf`;
+
+        const opt = {
+          margin: 1,
+          filename: filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
+        };
+
+        // Use html2pdf to generate and download the PDF
+        html2pdf().from(element).set(opt).save();
+      }
+    </script>
+  </body>
+</html>
